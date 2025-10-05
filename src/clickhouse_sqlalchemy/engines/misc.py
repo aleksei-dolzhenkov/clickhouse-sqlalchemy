@@ -1,3 +1,5 @@
+from typing import Any, Self
+
 from .base import Engine
 from .util import parse_columns
 
@@ -96,6 +98,9 @@ class _NoParamsEngine(Engine):
     @classmethod
     def reflect(cls, table, engine_full, **kwargs):
         return cls()
+
+    def _copy(self, **kw: Any) -> Self:
+        return self.__class__()
 
 
 class View(_NoParamsEngine):

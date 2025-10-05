@@ -1,3 +1,5 @@
+from typing import Any, Self
+
 from sqlalchemy import text
 from sqlalchemy.util import to_list
 
@@ -6,7 +8,6 @@ from .util import parse_columns
 
 
 class MergeTree(Engine):
-
     __visit_name__ = "merge_tree"
 
     def __init__(
@@ -93,6 +94,17 @@ class MergeTree(Engine):
     def reflect(cls, table, engine_full, **kwargs):
         return cls(**cls._reflect_merge_tree(table, **kwargs))
 
+    def _get_init_kwargs(self):
+        params = self.settings.copy()
+        for field in ("partition_by", "order_by", "primary_key", "sample_by", "ttl"):
+            val = getattr(self, field, None)
+            if val:
+                params[field] = val.get_expressions_or_columns()
+        return params
+
+    def _copy(self, **kw: Any) -> Self:
+        return self.__class__(**self._get_init_kwargs(), **kw)
+
 
 class AggregatingMergeTree(MergeTree):
     pass
@@ -114,6 +126,11 @@ class GraphiteMergeTree(MergeTree):
 
         return cls(config_name, **cls._reflect_merge_tree(table, **kwargs))
 
+    def _get_init_kwargs(self):
+        params = super()._get_init_kwargs()
+        params["config_name"] = self.config_name
+        return params
+
 
 class CollapsingMergeTree(MergeTree):
     def __init__(self, sign_col, *args, **kwargs):
@@ -134,6 +151,11 @@ class CollapsingMergeTree(MergeTree):
         sign_col = engine[len(cls.__name__) :].strip("()")
 
         return cls(sign_col, **cls._reflect_merge_tree(table, **kwargs))
+
+    def _get_init_kwargs(self):
+        params = super()._get_init_kwargs()
+        params["sign_col"] = self.sign_col.get_column()
+        return params
 
 
 class VersionedCollapsingMergeTree(MergeTree):
@@ -159,6 +181,12 @@ class VersionedCollapsingMergeTree(MergeTree):
         sign_col, version_col = parse_columns(columns)
 
         return cls(sign_col, version_col, **cls._reflect_merge_tree(table, **kwargs))
+
+    def _get_init_kwargs(self):
+        params = super()._get_init_kwargs()
+        params["sign_col"] = self.sign_col.get_column()
+        params["version_col"] = self.sign_col.get_column()
+        return params
 
 
 class SummingMergeTree(MergeTree):
@@ -189,6 +217,11 @@ class SummingMergeTree(MergeTree):
 
         return cls(columns=columns, **cls._reflect_merge_tree(table, **kwargs))
 
+    def _get_init_kwargs(self):
+        params = super()._get_init_kwargs()
+        params["columns"] = self.summing_cols.get_expressions_or_columns()
+        return params
+
 
 class ReplacingMergeTree(MergeTree):
     def __init__(self, *args, **kwargs):
@@ -217,3 +250,8 @@ class ReplacingMergeTree(MergeTree):
             version_col = version_col.split(",")[0]
 
         return cls(version=version_col, **cls._reflect_merge_tree(table, **kwargs))
+
+    def _get_init_kwargs(self):
+        params = super()._get_init_kwargs()
+        params["version_col"] = self.version_col.get_expressions_or_columns()
+        return params
