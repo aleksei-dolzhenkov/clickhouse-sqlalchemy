@@ -14,7 +14,7 @@ def get_inner_spec(spec):
         if brackets == 0:
             break
 
-    return spec[offset + 1 : i]
+    return spec[offset + 1: i]
 
 
 def parse_arguments(param_string):
@@ -42,3 +42,9 @@ def parse_arguments(param_string):
         params.append(current_param.strip())
 
     return tuple(params)
+
+
+def unquote_string(val: str) -> str:
+    if val.startswith("'") and val.endswith("'"):
+        return val[1:-1]
+    return val

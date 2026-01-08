@@ -253,5 +253,5 @@ class ReplacingMergeTree(MergeTree):
 
     def _get_init_kwargs(self):
         params = super()._get_init_kwargs()
-        params["version_col"] = self.version_col.get_expressions_or_columns()
+        params["version"] = self.version_col.get_column()
         return params

@@ -14,11 +14,11 @@ from .compilers.ddlcompiler import ClickHouseDDLCompiler
 from .compilers.sqlcompiler import ClickHouseSQLCompiler
 from .compilers.typecompiler import ClickHouseTypeCompiler
 from .reflection import ClickHouseInspector
-from .util import get_inner_spec, parse_arguments
+from .util import get_inner_spec, parse_arguments, unquote_string
+
 
 # Column specifications
 colspecs = {}
-
 
 # Type converters
 ischema_names = {
@@ -62,10 +62,10 @@ ischema_names = {
 
 
 class ClickHouseIdentifierPreparer(compiler.IdentifierPreparer):
-
     reserved_words = compiler.IdentifierPreparer.reserved_words | set(
         ("index",)  # reserved in the 'create table' syntax, at least.
     )
+
     # Alternatively, use `_requires_quotes = lambda self, value: True`
 
     def _escape_identifier(self, value):
@@ -294,7 +294,7 @@ class ClickHouseDialect(default.DefaultDialect):
 
             options = dict()
             if pos >= 0:
-                options = self._parse_options(spec[pos + 1 : spec.rfind(")")])
+                options = self._parse_options(spec[pos + 1: spec.rfind(")")])
             if not options:
                 return sqltypes.NullType
 
@@ -331,7 +331,7 @@ class ClickHouseDialect(default.DefaultDialect):
         params = inner_spec.split(",", 1)
         params[0] = int(params[0])
         if len(params) > 1:
-            params[1] = params[1].strip()
+            params[1] = unquote_string(params[1].strip())
         return params
 
     @staticmethod
@@ -339,7 +339,7 @@ class ClickHouseDialect(default.DefaultDialect):
         inner_spec = get_inner_spec(spec)
         if not inner_spec:
             return []
-        return [inner_spec]
+        return [unquote_string(inner_spec)]
 
     @staticmethod
     def _parse_options(option_string):
